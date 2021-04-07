@@ -1,5 +1,6 @@
 import { Injectable } from '@angular/core';
 import { LoadingController, NavController } from '@ionic/angular';
+import Payment from 'src/models/Payment';
 
 declare let PagSeguroDirectPayment;
 
@@ -13,30 +14,7 @@ export class PagseguroService {
   processing: boolean = false
   session: any
   
-  public formPayment = {
-    nome: '',
-    cpf: '',
-    codigo: '',
-    tipo: 'semestral',
-    plano: '',
-    birthDate: '',
-    brand: '',
-    number: '',
-    expiration: '',
-    cvv: '',
-    validCpf: false,
-    cardToken: '',
-    hash: '',
-    address:{
-      logradouro: '',
-      number: '',
-      complemento: '',
-      bairro: '',
-      cidade: '',
-      estado: '',
-      cep: '',
-    }
-  }
+  private formPayment = new Payment()
 
   constructor(
     // private pagamentoDAO: PagamentoDAO,
@@ -52,7 +30,7 @@ export class PagseguroService {
     // })
   }
 
-  addressValido(){
+  validAddress(){
 
     let valido = true
     
@@ -79,7 +57,7 @@ export class PagseguroService {
     return valido
   }
 
-  cpfValido() {
+  validCpf() {
     let strCPF = this.formPayment.cpf
     this.formPayment.validCpf = true
 
@@ -110,18 +88,17 @@ export class PagseguroService {
       this.formPayment.validCpf = false
     
     return this.formPayment.validCpf
-    
   }
 
-  cartaoValido(){
+  validCard(){
 
-    if(this.formPayment.nome==''){
+    if(this.formPayment.full_name==''){
       this.processing = false
       this.presentAlert('Atenção', 'Por favor preencha com o nome completo do titular do cartão.')
       
       return false
     }else{
-      if(this.formPayment.nome.indexOf(" ")==-1 || this.formPayment.nome.split(" ")[1] == ''){
+      if(this.formPayment.full_name.indexOf(" ")==-1 || this.formPayment.full_name.split(" ")[1] == ''){
         
         // this.loader.dismiss()
         this.processing = false
@@ -131,24 +108,24 @@ export class PagseguroService {
       }
     }
     
-    if(this.formPayment.number.length != 19){
+    if(this.formPayment.card.number.length != 19){
       
       this.presentAlert('Cartão incompleto', 'Por favor preencha com todos os números do cartão de crédito.')
       // this.loader.dismiss()
       this.processing = false
       return false
-    }else if(this.formPayment.expiration.length != 7){
+    }else if(this.formPayment.card.expiration.length != 7){
       this.presentAlert('Vencimento', 'Por favor preencha o expiration do cartão de crédito.')
       // this.loader.dismiss()
       this.processing = false
       return false
-    }else if(this.formPayment.cvv.length < 3){
+    }else if(this.formPayment.card.cvv.length < 3){
       this.presentAlert('Código de segurança', 'Por favor preencha com o código de segurança do cartão de crédito.')
       // this.loader.dismiss()
       this.processing = false
       return false
     }else{
-      let cartao: String = this.formPayment.number
+      let cartao: String = this.formPayment.card.number
       return cartao
     }
   }
@@ -157,15 +134,15 @@ export class PagseguroService {
 
     this.presentLoading("Validando Cartão...")
     
-    if(this.formPayment.number){
+    if(this.formPayment.card.number){
 
-      let splitCartao = this.formPayment.number.split(' ');
+      let splitCartao = this.formPayment.card.number.split(' ');
       // Pegar a brand do cartão
       PagSeguroDirectPayment.getBrand({
         cardBin: splitCartao[0]+splitCartao[1],
         success: response => {
 
-          this.formPayment.brand = response.brand.name
+          this.formPayment.card.brand = response.brand.name
           
           this.loader.dismiss()
           this.generateToken();
@@ -188,8 +165,6 @@ export class PagseguroService {
   }
 
   generateToken(){
-    console.log(this.processing)
-    console.log('do generateToken()')
     if(!this.processing){
 
       this.presentLoading("Realizando pagamento...")
@@ -201,15 +176,15 @@ export class PagseguroService {
     this.formPayment.hash = hash;
 
     // Pegar token cartão de crédito
-    let numberCartao = this.formPayment.number.replace(/\s/g, '')
-    let vencimentoSplit = this.formPayment.expiration.split('/')
+    let numberCartao = this.formPayment.card.number.replace(/\s/g, '')
+    let expiration = this.formPayment.card.expiration.split('/')
 
     var param = {
       cardNumber: numberCartao,
-      cvv: this.formPayment.cvv,
-      expirationMonth: vencimentoSplit[0],
-      expirationYear: vencimentoSplit[1],
-      brand: this.formPayment.brand,
+      cvv: this.formPayment.card.cvv,
+      expirationMonth: expiration[0],
+      expirationYear: expiration[1],
+      brand: this.formPayment.card.brand,
       success: (response) => {
         this.loader.dismiss()
 
@@ -259,6 +234,10 @@ export class PagseguroService {
 
       
     // })
+  }
+
+  updateForm(form){
+    this.formPayment = form
   }
   
   async presentLoading(message) {

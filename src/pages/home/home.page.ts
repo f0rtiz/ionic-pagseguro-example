@@ -1,4 +1,6 @@
 import { Component } from '@angular/core';
+import Payment from 'src/models/Payment';
+import { PagseguroService } from 'src/services/pagseguro/pagseguro.service';
 
 @Component({
   selector: 'app-home',
@@ -7,6 +9,15 @@ import { Component } from '@angular/core';
 })
 export class HomePage {
 
-  constructor() {}
+  formPayment: Payment = new Payment()
+
+  constructor(
+    private pagseguroService: PagseguroService
+  ) {}
+  
+  send(){
+    this.pagseguroService.updateForm(this.formPayment)
+
+  }
 
 }
